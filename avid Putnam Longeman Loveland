@@ -1,0 +1,145 @@
+#include <iostream>
+#include <vector>
+#include <ctime>
+#include <algorithm>
+using namespace std;
+
+
+bool unit_propagate(vector<vector<int>>& clauses, vector<int>& assignment) {
+    bool changed;
+    do {
+        changed = false;
+        for (auto it = clauses.begin(); it != clauses.end(); ) {
+            if (it->size() == 1) {
+                int unit = (*it)[0];
+                int var = abs(unit);
+                bool value = (unit > 0);
+
+      
+                if (assignment[var - 1] != -1 && assignment[var - 1] != value)
+                    return false;
+
+                assignment[var - 1] = value;
+                changed = true;
+
+            
+                vector<vector<int>> new_clauses;
+                for (auto& clause : clauses) {
+                    bool clause_satisfied = false;
+                    vector<int> new_clause;
+                    for (int lit : clause) {
+                        if (lit == unit)
+                            clause_satisfied = true;
+                        else if (lit == -unit)
+                            continue;
+                        else
+                            new_clause.push_back(lit);
+                    }
+                    if (!clause_satisfied)
+                        new_clauses.push_back(new_clause);
+                }
+                clauses = new_clauses;
+                break;  // Restart bucla pentru noile clauze
+            } else {
+                ++it;
+            }
+        }
+    } while (changed);
+    return true;
+}
+
+bool is_clause_satisfied(const vector<int>& clause, const vector<int>& assignment) {
+    for (int lit : clause) {
+        int var = abs(lit);
+        if (assignment[var - 1] == -1) continue;
+        if ((lit > 0 && assignment[var - 1]) || (lit < 0 && !assignment[var - 1]))
+            return true;
+    }
+    return false;
+}
+
+bool is_formula_satisfied(const vector<vector<int>>& clauses, const vector<int>& assignment) {
+    for (const auto& clause : clauses) {
+        if (!is_clause_satisfied(clause, assignment))
+            return false;
+    }
+    return true;
+}
+
+bool dpll(vector<vector<int>> clauses, vector<int>& assignment) {
+    if (!unit_propagate(clauses, assignment)) return false;
+
+     if (clauses.empty()) return true;
+
+    for (const auto& clause : clauses)
+        if (clause.empty()) return false;
+
+    // Căutăm o variabilă nerezolvată
+    int var = -1;
+    for (int i = 0; i < assignment.size(); ++i) {
+        if (assignment[i] == -1) {
+            var = i;
+            break;
+        }
+    }
+
+    if (var == -1) return is_formula_satisfied(clauses, assignment);
+    {
+        vector<int> new_assignment = assignment;
+        new_assignment[var] = true;
+        if (dpll(clauses, new_assignment)) {
+            assignment = new_assignment;
+            return true;
+        }
+    }
+
+
+    {
+        vector<int> new_assignment = assignment;
+        new_assignment[var] = false;
+        if (dpll(clauses, new_assignment)) {
+            assignment = new_assignment;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+int main() {
+    int m, n;
+    cout << "Câte clauze doriți să introduceți? ";
+    cin >> m;
+
+    vector<vector<int>> clauses(m); 
+    vector<int> vars; 
+    
+    for (int i = 0; i < m; ++i) {
+        cout << "C" << i + 1 << ": Introduceți clauza (ex: 1 -2 3): ";
+        int x;
+        while (cin >> x) {
+            clauses[i].push_back(x);
+            if (cin.peek() == '\n') 
+                 break;
+        }
+        for (int j = 0; j < clauses[i].size(); ++j) {
+            int val = clauses[i][j];
+            if (find(vars.begin(), vars.end(), abs(val)) == vars.end()) {
+                vars.push_back(abs(val));
+            }
+        }
+    }
+
+    n = vars.size(); 
+
+    clock_t start_dpll = clock();
+    vector<int> assignment(n, -1); // -1 = neatribuit, 0 = false, 1 = true
+    bool dpll_result = dpll(clauses, assignment);
+    clock_t end_dpll = clock();
+    double time_dpll = double(end_dpll - start_dpll) / CLOCKS_PER_SEC;
+
+    cout << "\nTimpul de executie DPLL: " << time_dpll << " sec" << endl;
+    cout << "Satisfiabilitate (DPLL): " << (dpll_result ? "Satisfiabil" : "Nesatisfiabil") << endl;
+
+    return 0;
+}
