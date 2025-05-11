@@ -1,0 +1,116 @@
+#include <iostream>
+#include <vector>
+#include <ctime>
+#include <set>
+#include <algorithm>
+using namespace std;
+
+const int MAX_CLAUZE = 100;
+const int MAX_VAR = 50;
+
+void elimina_literal(vector<vector<int>>& clauze, int literal) {
+    vector<vector<int>> noua_lista;
+    for (auto& clauza : clauze) {
+        if (find(clauza.begin(), clauza.end(), literal) != clauza.end())
+            continue;
+        vector<int> noua_clauza;
+        for (int lit : clauza) {
+            if (lit != -literal)
+                noua_clauza.push_back(lit);
+        }
+        noua_lista.push_back(noua_clauza);
+    }
+    clauze = noua_lista;
+}
+
+bool exista_clauza_goala(const vector<vector<int>>& clauze) {
+    for (const auto& clauza : clauze) {
+        if (clauza.empty()) return true;
+    }
+    return false;
+}
+
+bool davis_putnam(vector<vector<int>> clauze) {
+    set<int> literali;
+    for (const auto& clauza : clauze)
+        for (int lit : clauza)
+            literali.insert(abs(lit));
+
+    while (!literali.empty()) {
+        int lit = *literali.begin();
+        literali.erase(lit);
+
+        vector<vector<int>> cu_lit, cu_neg_lit;
+        for (auto& clauza : clauze) {
+            if (find(clauza.begin(), clauza.end(), lit) != clauza.end())
+                cu_lit.push_back(clauza);
+            else if (find(clauza.begin(), clauza.end(), -lit) != clauza.end())
+                cu_neg_lit.push_back(clauza);
+        }
+
+        vector<vector<int>> rezolvate;
+        for (auto& c1 : cu_lit) {
+            for (auto& c2 : cu_neg_lit) {
+                set<int> temp;
+                for (int x : c1)
+                    if (x != lit) temp.insert(x);
+                for (int x : c2)
+                    if (x != -lit) temp.insert(x);
+                vector<int> rezolvat(temp.begin(), temp.end());
+                rezolvate.push_back(rezolvat);
+            }
+        }
+
+        elimina_literal(clauze, lit);
+        elimina_literal(clauze, -lit);
+
+        for (auto& cl : rezolvate) {
+            clauze.push_back(cl);
+            for (int x : cl)
+                literali.insert(abs(x));
+        }
+
+        if (exista_clauza_goala(clauze))
+            return false;
+    }
+
+    return true;
+}
+
+int main() {
+    int m;
+    cout << "Introduceți numărul de clauze (max " << MAX_CLAUZE << "): ";
+    cin >> m;
+    if (m > MAX_CLAUZE) {
+        cout << "Prea multe clauze. Ieșire.\n";
+        return 1;
+    }
+
+    vector<vector<int>> clauze(m);
+    set<int> variabile;
+
+    for (int i = 0; i < m; ++i) {
+        cout << "C" << i + 1 << ": Introduceți clauza (ex: 1 -2 3): ";
+        int x;
+        while (cin >> x) {
+            clauze[i].push_back(x);
+            variabile.insert(abs(x));
+            if (cin.peek() == '\n') break;
+        }
+    }
+
+    if (variabile.size() > MAX_VAR) {
+        cout << "Prea multe variabile. Ieșire.\n";
+        return 1;
+    }
+
+    clock_t start = clock();
+    bool satisfiabil = davis_putnam(clauze);
+    clock_t end = clock();
+    double timp = double(end - start) / CLOCKS_PER_SEC;
+
+    cout << "\nFormula este " << (satisfiabil ? "satisfiabilă" : "nesatisfiabilă") << ".\n";
+    cout << "Timp de execuție: " << timp << " secunde.\n";
+
+    return 0;
+}
