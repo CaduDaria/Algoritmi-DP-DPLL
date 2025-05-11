@@ -1,0 +1,138 @@
+#include <iostream>
+#include <vector>
+#include <ctime>
+#include <algorithm>
+using namespace std;
+
+/**
+ * @brief Funcție recursivă pentru verificarea satisfiabilității folosind backtracking.
+ * @param clauses: Lista de clauze care trebuie satisfăcute.
+ * @param assignment: Vector care ține evidența asignării valorilor pentru variabile.
+ * @param var_idx: Indexul variabilei curente în procesul de asignare.
+ * @return True dacă satisfacția a fost găsită pentru toate clauzele, false altfel.
+ */
+bool dp_helper(vector<vector<int>>& clauses, vector<bool>& assignment, int var_idx) {
+    // Verificăm satisfacția tuturor clauzelor
+    if (var_idx == assignment.size()) {
+        for (const auto& clause : clauses) {
+            bool clause_satisfied = false;
+            for (int lit : clause) {
+                // Verificăm fiecare literal al clauzei
+                if (lit > 0 && assignment[lit - 1] || lit < 0 && !assignment[-lit - 1]) {
+                    clause_satisfied = true;
+                    break;
+                }
+            }
+            if (!clause_satisfied) return false;
+        }
+        return true;
+    }
+
+    // Setăm variabila curentă pe true și apelăm recursiv
+    assignment[var_idx] = true;
+    if (dp_helper(clauses, assignment, var_idx + 1)) return true;
+
+    // Setăm variabila curentă pe false și apelăm recursiv
+    assignment[var_idx] = false;
+    return dp_helper(clauses, assignment, var_idx + 1);
+}
+
+/**
+ * @brief Algoritmul DP pentru verificarea satisfiabilității.
+ * @param clauses: Lista de clauze care trebuie satisfăcute.
+ * @param n: Numărul de variabile.
+ * @return True dacă formularea este satisfiabilă, false altfel.
+ */
+bool dp(vector<vector<int>>& clauses, int n) {
+    vector<bool> assignment(n, false); // Inițializare valori false pentru variabile
+    return dp_helper(clauses, assignment, 0); // Apelăm funcția recursivă
+}
+
+/**
+ * @brief Algoritmul DPLL pentru verificarea satisfiabilității.
+ * @param clauses: Lista de clauze care trebuie satisfăcute.
+ * @param assignment: Vector care ține evidența asignării valorilor pentru variabile.
+ * @param var_idx: Indexul variabilei curente în procesul de asignare.
+ * @return True dacă satisfacția a fost găsită pentru toate clauzele, false altfel.
+ */
+bool dpll(vector<vector<int>>& clauses, vector<bool>& assignment, int var_idx) {
+    // Verificăm satisfacția tuturor clauzelor
+    if (var_idx == assignment.size()) {
+        for (auto& clause : clauses) {
+            bool satisfied = false;
+            for (int lit : clause) {
+                if (lit > 0 && assignment[lit - 1] || lit < 0 && !assignment[-lit - 1]) {
+                    satisfied = true;
+                    break;
+                }
+            }
+            if (!satisfied) return false;
+        }
+        return true;
+    }
+
+    // Setăm variabila pe true și apelăm recursiv
+    assignment[var_idx] = true;
+    if (dpll(clauses, assignment, var_idx + 1)) return true;
+
+    // Setăm variabila pe false și apelăm recursiv
+    assignment[var_idx] = false;
+    return dpll(clauses, assignment, var_idx + 1);
+}
+
+int main() {
+    int m, n;
+    cout << "Câte clauze doriți să introduceți? ";
+    cin >> m;
+
+    vector<vector<int>> clauses(m); // Lista de clauze
+    vector<int> vars; // Lista variabilelor
+
+    // Citim clauzele
+    for (int i = 0; i < m; ++i) {
+        cout << "C" << i + 1 << ": Introduceți clauza (ex: 1 -2 3): ";
+        int x;
+        while (cin >> x) {
+            clauses[i].push_back(x);
+            if (cin.peek() == '\n') break;
+        }
+        // Adăugăm variabilele în lista de variabile
+        for (int val : clauses[i]) {
+            if (find(vars.begin(), vars.end(), abs(val)) == vars.end()) {
+                vars.push_back(abs(val)); // Adăugăm variabila fără duplicate
+            }
+        }
+    }
+
+    n = vars.size(); // Numărul de variabile
+
+    // Măsurăm timpul pentru algoritmul DP
+    clock_t start_dp = clock();
+    bool dp_result = dp(clauses, n);
+    clock_t end_dp = clock();
+    double time_dp = double(end_dp - start_dp) / CLOCKS_PER_SEC;
+
+    // Măsurăm timpul pentru algoritmul DPLL
+    clock_t start_dpll = clock();
+    vector<bool> assignment(n, false);
+    bool dpll_result = dpll(clauses, assignment, 0);
+    clock_t end_dpll = clock();
+    double time_dpll = double(end_dpll - start_dpll) / CLOCKS_PER_SEC;
+
+    // Afișăm rezultatele
+    cout << "\nTimpul de executie DP: " << time_dp << " sec" << endl;
+    cout << "Timpul de executie DPLL: " << time_dpll << " sec" << endl;
+    
+    // Satisfiabilitatea formulării
+    cout << "Satisfiabilitate (DP): " << (dp_result ? "Satisfiabil" : "Nesatisfiabil") << endl;
+    cout << "Satisfiabilitate (DPLL): " << (dpll_result ? "Satisfiabil" : "Nesatisfiabil") << endl;
+
+    // Comparăm eficiența algoritmilor
+    if (time_dp < time_dpll) {
+        cout << "Algoritmul mai eficient este DP.\n";
+    } else {
+        cout << "Algoritmul mai eficient este DPLL.\n";
+    }
+
+    return 0;
+}
